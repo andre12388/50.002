@@ -1,0 +1,146 @@
+module player1 (
+    input clk,  // clock
+    input rst,  // reset
+    input first,
+    input second,
+    input confirm,
+    
+    output firstled[4],
+    output secondled[4],
+    output result[8]
+  ) {
+
+  fsm state(.clk(clk),.rst(rst), #INIT(P1ENTER)) = {P1ENTER,P1CHANGE,PLUS2ONLY,MINUS2ONLY};
+  
+  .clk(clk){
+     edge_detector first_edge(#RISE(1), #FALL(0));
+     button_conditioner first_button;
+     edge_detector second_edge(#RISE(1), #FALL(0));
+     button_conditioner second_button;
+     edge_detector confirm_edge(#RISE(1), #FALL(0));
+     button_conditioner confirm_button;
+    .rst(rst){
+    
+      alu alu;
+      dff firstdigit[4];
+      dff seconddigit[4];
+  //    dff temptotal[8];
+      dff total[8];
+      
+      }
+    
+    }
+  
+  always {
+    firstled = firstdigit.q;
+    secondled = seconddigit.q;
+    result = total.q;
+    
+    first_button.in = first;
+    first_edge.in = first_button.out;
+    second_button.in = second;
+    second_edge.in = second_button.out;
+    confirm_button.in = confirm;
+    confirm_edge.in = confirm_button.out;
+    
+    //alu
+    alu.alufn = 6b000000;
+    alu.a = firstdigit.q;
+    alu.b = 1;
+    
+    case(state.q){
+      state.P1ENTER:
+        if(first_edge.out==1){
+          if(firstdigit.q==9){
+            firstdigit.d = 0;
+          }else{
+            alu.alufn = 6b000000;
+            alu.a = firstdigit.q;
+            alu.b = 1;
+            firstdigit.d = alu.s[3:0];
+          }
+        }
+        if(second_edge.out==1){
+          if(seconddigit.q==9){
+            seconddigit.d = 0;
+          }else{
+            alu.alufn = 6b000000;
+            alu.a = seconddigit.q;
+            alu.b = 1;
+            seconddigit.d = alu.s[3:0];
+          }
+        }
+        if(confirm_edge.out==1){
+          alu.alufn = 6b000010;
+          alu.a = seconddigit.q;
+          alu.b = 10;
+          total.d = firstdigit.q + alu.s;
+          state.d = state.P1CHANGE;
+        }
+      state.P1CHANGE:
+        if(first_edge.out==1){
+          if(total.q<98){
+            alu.alufn = 6b000000;
+            alu.a = total.q;
+            alu.b = 2;
+            total.d = alu.s;
+            state.d = state.MINUS2ONLY;
+          }
+        }
+        if(second_edge.out==1){
+          if(total.q>1){
+            alu.alufn = 6b000001;
+            alu.a = total.q;
+            alu.b = 2;
+            total.d = alu.s;
+            state.d = state.PLUS2ONLY;
+          }
+        }
+        if(confirm_edge.out==1){
+          total.d = total.q;
+        }
+      state.MINUS2ONLY:
+        if(second_edge.out==1){
+          if(total.q>1){
+            alu.alufn = 6b000001;
+            alu.a = total.q;
+            alu.b = 2;
+            total.d = alu.s;
+            firstdigit.d = firstdigit.q - 2;
+            state.d = state.P1CHANGE;
+          }
+        }
+      state.PLUS2ONLY:
+        if(first_edge.out==1){
+          if(total.q<98){
+            alu.alufn = 6b000000;
+            alu.a = total.q;
+            alu.b = 2;
+            total.d = alu.s;
+            firstdigit.d = firstdigit.q + 2;
+            state.d = state.P1CHANGE;
+          }
+        }    
+    }
+  }
+}
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
